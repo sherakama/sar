@@ -10,6 +10,8 @@
  * Implements hook_drush_command().
  */
 function sar_drush_command() {
+
+  // Just for text fields.
   $items['search-and-replace'] = array(
     'aliases' => array('sar'),
     'callback' => 'drush_sar_replace',
@@ -33,6 +35,25 @@ function sar_drush_command() {
       'complex'   => dt('drush sar --bundles=article --fields=field_name,field_other devel.example.com www.example.com'),
       'dry run'   => dt('drush sar --dry-run devel.example.com www.example.com'),
       'show ids'  => dt('drush sar --show-ids devel.example.com www.example.com'),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+  );
+
+  // For links.
+  $items['search-and-replace-link'] = array(
+    'aliases' => array('sarl'),
+    'callback' => 'drush_sar_replace_link',
+    'description' => dt('Replace strings in link fields in all content.'),
+    'options' => array(
+      'fields'   => dt('Only perform the search and replace on these named fields.'),
+    ),
+    'arguments' => array(
+      'search'  => dt('Existing text.'),
+      'replace' => dt('Replacement text.'),
+    ),
+    'examples' => array(
+      'simple'    => dt('drush sarl devel.example.com www.example.com'),
+      'fields'    => dt('drush sarl --fields=field_name,field_other devel.example.com www.example.com'),
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
@@ -105,6 +126,34 @@ function drush_sar_replace() {
 }
 
 /**
+ * Command callback.
+ *
+ * This callback checks the version of Drupal it's operating on and runs an
+ * appropriate function to do the actual work. If an unsupported version is
+ * detected, it will exit.
+ */
+function drush_sar_replace_link() {
+
+  // Parse our command line options.
+  $options = drush_sar_parse_options();
+
+  // If there's a problem yo I'll solve it...
+  if (!empty($options['error'])) {
+    foreach ($options['error'] as $error) {
+      drush_log($error, 'error');
+    }
+    return 0;
+  }
+
+  drush_print(dt('Going to @operate a search & replace on all link fields in all bundles and all custom blocks on @site', array('@site' => variable_get('site_name', 'Drupal'), '@operate' => empty($options['dryrun']) ? 'perform' : 'fake')));
+  drush_print(dt('  !search => !replace', array('!search' => $options['search'], '!replace' => $options['replace'])));
+  drush_print(dt(' '));
+
+  return _drush_sar_replace_links($options);
+
+}
+
+/**
  * Parse CLI args and options and return as an array.
  */
 function drush_sar_parse_options() {
@@ -157,6 +206,76 @@ function drush_sar_parse_options() {
 }
 
 /**
+ * [_drush_sar_replace_links description]
+ * @param  [type] $options [description]
+ * @return [type]          [description]
+ */
+function _drush_sar_replace_links($options) {
+
+  // Grab all defined fields, then cycle through them and run update queries.
+  $fields = field_info_fields();
+
+  // Only linkn fields.
+  $link_fields = array_filter($fields, "is_link_field");
+
+  // If fields are explicit then filter out to just those.
+  if (!empty($options['fields'])) {
+    $link_fields = array_filter($link_fields, "is_field_option");
+  }
+
+  if (empty($link_fields)) {
+    drush_log("No fields to process", "error");
+    return;
+  }
+
+  foreach ($link_fields as $field_info) {
+    $field_name = $field_info["field_name"];
+    $columns = array_keys($field_info['columns']);
+    $data_table = _field_sql_storage_tablename($field_info);
+    $revision_table = _field_sql_storage_revision_tablename($field_info);
+
+    foreach ($columns as $column_key) {
+      $column = $field_name . "_" . $column_key;
+      $query = db_update($data_table)
+        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      $updated = $query->execute();
+
+      $query = db_update($revision_table)
+        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      $updated = $query->execute();
+
+    }
+
+  }
+
+}
+
+
+/**
+ * [_is_link_field description]
+ * @param  [type]  $var [description]
+ * @return boolean      [description]
+ */
+function is_link_field($var) {
+  return ($var['module'] === "link");
+}
+
+/**
+ * [is_field_option description]
+ * @param  [type]  $var [description]
+ * @return boolean      [description]
+ */
+function is_field_option($var) {
+  $fields = drush_get_option('fields');
+  if (!empty($fields)) {
+    $fields = array_filter(explode(',', $fields));
+  }
+
+  return in_array($var['field_name'], $fields);
+}
+
+
+/**
  * Does the search and replace for Drupal 7 sites.
  */
 function _drush_sar_replace_d7($options) {
@@ -165,6 +284,7 @@ function _drush_sar_replace_d7($options) {
     // Grab all defined fields, then cycle through them and run update queries.
     $fields = field_info_fields();
     foreach ($fields as $field) {
+
       // Skip fields that aren't provided by the text module.
       if ($field['module'] != 'text') {
         continue;
