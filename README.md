@@ -14,13 +14,13 @@ only way to undo changes.
 
 ```
 Examples:
- simple                                    drush sarl devel.example.com www.example.com
- fields                                    drush sarl --fields=field_name,field_other devel.example.com www.example.com
+ simple     drush sarl devel.example.com www.example.com
+ fields     drush sarl --fields=field_name,field_other devel.example.com www.example.com
 
 Arguments:
- search                                    Existing text.
- replace                                   Replacement text.
+ search     Existing text.
+ replace    Replacement text.
 
 Options:
- --fields                                  Only perform the search and replace on these named fields.
+ --fields   Only perform the search and replace on these named fields.
 ```
