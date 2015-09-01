@@ -192,6 +192,10 @@ function drush_sar_parse_options() {
     $error[] = dt('Cannot process blocks when bundles or fields are specified.');
   }
 
+  if (empty($args[1])) {
+    $error[] = dt('Must provide a search value.');
+  }
+
   $replace = $args[2];
   if (empty($args[2])) {
     $replace = "";
