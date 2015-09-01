@@ -192,10 +192,15 @@ function drush_sar_parse_options() {
     $error[] = dt('Cannot process blocks when bundles or fields are specified.');
   }
 
+  $replace = $args[2];
+  if (empty($args[2])) {
+    $replace = "";
+  }
+
   // Return an array of options.
   return array(
     'search'  => $args[1],
-    'replace' => $args[2],
+    'replace' => $replace,
     'bundles' => $bundles,
     'fields'  => $fields,
     'blocks'  => $blocks,
@@ -236,13 +241,19 @@ function _drush_sar_replace_links($options) {
 
     foreach ($columns as $column_key) {
       $column = $field_name . "_" . $column_key;
+
+      // THE MEAT -
+      // -----------------------------------------------------------------------
+
       $query = db_update($data_table)
         ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-      $updated = $query->execute();
+      $result_data = $query->execute();
 
       $query = db_update($revision_table)
         ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-      $updated = $query->execute();
+      $result_revision = $query->execute();
+
+      // -----------------------------------------------------------------------
 
     }
 
