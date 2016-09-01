@@ -24,3 +24,19 @@ Arguments:
 Options:
  --fields   Only perform the search and replace on these named fields.
 ```
+
+
+## Menu Items
+
+```
+Examples:
+ simple     drush sarm devel.example.com www.example.com
+ fields     drush sarm --menus=main-menu,navigation devel.example.com www.example.com
+
+Arguments:
+ search     Existing text.
+ replace    Replacement text.
+
+Options:
+ --menus   Only perform the search and replace on these named menus. Leave empty for all.
+```
