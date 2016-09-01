@@ -58,6 +58,25 @@ function sar_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
 
+  // For menu items.
+  $items['search-and-replace-menu'] = array(
+    'aliases' => array('sarm'),
+    'callback' => 'drush_sar_replace_menu',
+    'description' => dt('Replace strings in menu items.'),
+    'options' => array(
+      'menus'   => dt('Only perform the search and replace on these menus.'),
+    ),
+    'arguments' => array(
+      'search'  => dt('Existing text.'),
+      'replace' => dt('Replacement text.'),
+    ),
+    'examples' => array(
+      'simple'    => dt('drush sarm devel.example.com www.example.com'),
+      'menus'    => dt('drush sarm --menus=main_menu,navigation devel.example.com www.example.com'),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+  );
+
   return $items;
 }
 
@@ -154,6 +173,27 @@ function drush_sar_replace_link() {
 }
 
 /**
+ * Command callback function for drush sarm.
+ *
+ * Search and replace all strings in menu items (title & link)
+ */
+function drush_sar_replace_menu() {
+  // Parse our command line options.
+  $options = drush_sar_parse_options();
+
+  // If there's a problem yo I'll solve it...
+  if (!empty($options['error'])) {
+    foreach ($options['error'] as $error) {
+      drush_log($error, 'error');
+    }
+    return 0;
+  }
+
+  return _drush_sar_replace_menus($options);
+
+}
+
+/**
  * Parse CLI args and options and return as an array.
  */
 function drush_sar_parse_options() {
@@ -163,6 +203,12 @@ function drush_sar_parse_options() {
   $bundles = drush_get_option('bundles');
   if (!empty($bundles)) {
     $bundles = array_filter(explode(',', $bundles));
+  }
+
+  // Check if there are specific menus to process.
+  $menus = drush_get_option('menus');
+  if (!empty($menus)) {
+    $menus = array_filter(explode(',', $menus));
   }
 
   // Check if there are specific fields to process.
@@ -210,7 +256,8 @@ function drush_sar_parse_options() {
     'blocks'  => $blocks,
     'dryrun'  => $dryrun,
     'showid'  => $showid,
-    'error  ' => $error,
+    'error' => $error,
+    'menus' => $menus,
   );
 }
 
@@ -264,6 +311,50 @@ function _drush_sar_replace_links($options) {
   }
 
 }
+
+/**
+ * [_drush_sar_replace_menu description]
+ * @param  [type] $options [description]
+ * @return [type]          [description]
+ */
+function _drush_sar_replace_menus($options) {
+
+  $menus = menu_load_all();
+  $menu_names = array_keys($menus);
+  if (isset($options['menus'])) {
+    $menu_names = array_intersect($menu_names, $options['menus']);
+  }
+
+  // No valid menus found.
+  if (empty($menu_names)) {
+    drush_set_error('NO_MENUS', dt('No menus found by the provided options.'));
+    return;
+  }
+
+  foreach ($menus as $menu_name) {
+    // Link Path.
+    $query = db_update("menu_links")
+      ->condition("menu_name", $menu_name)
+      ->expression("link_path", "REPLACE(\"link_path\", :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+    $result_data = $query->execute();
+
+    // Router Path.
+    $query = db_update("menu_links")
+      ->condition("menu_name", $menu_name)
+      ->expression("router_path", "REPLACE(\"router_path\", :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+    $result_data = $query->execute();
+
+    // Link Title.
+    $query = db_update("menu_links")
+      ->condition("menu_name", $menu_name)
+      ->expression("link_title", "REPLACE(\"link_title\", :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+    $result_data = $query->execute();
+  }
+
+  echo "Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in: " . implode($menu_names, ", ");
+
+}
+
 
 
 /**
