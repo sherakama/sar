@@ -410,9 +410,10 @@ function _drush_sar_replace_d7($options) {
       // does not exist on the bundles specified, just skip to the next field.
       if (!empty($options['bundles'])) {
         $bundles = array_intersect($options['bundles'], $bundles);
-        if (empty($bundles)) {
-          continue;
-        }
+      }
+
+      if (empty($bundles)) {
+        continue;
       }
 
       // At this stage, $bundles contains either the full list of bundles for
