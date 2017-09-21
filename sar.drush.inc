@@ -229,7 +229,7 @@ function drush_sar_parse_options() {
 
   // The other CLI args.
   $args = drush_get_arguments();
-  if (count($args) < 3) {
+  if (count($args) < 2) {
     $error[] = dt('You need to specify both a string to search and one to replace.');
   }
 
