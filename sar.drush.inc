@@ -303,34 +303,22 @@ function _drush_sar_replace_links($options) {
 
       // THE MEAT -
       // -----------------------------------------------------------------------
-
-      if (!$options['regex']) {
-        $query = db_update($data_table)
-          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-        $result_data = $query->execute();
-
-        $query = db_update($revision_table)
-          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-        $result_revision = $query->execute();
+      $query = db_update($data_table)
+        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      if ($options['regex']) {
+        $query->condition($column, $option['regex'], "REGEXP");
       }
-      else {
-        $query = db_update($data_table)
-          ->expression($column, "REGEX :regex", array(":regex" => $options['regex']))
-          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-        $result_data = $query->execute();
+      $result_data = $query->execute();
 
-        $query = db_update($revision_table)
-          ->expression($column, "REGEX :regex", array(":regex" => $options['regex']))
-          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-        $result_revision = $query->execute();
+      $query = db_update($revision_table)
+        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      if ($options['regex']) {
+        $query->condition($column, $option['regex'], "REGEXP");
       }
-
-      // -----------------------------------------------------------------------
-
+      $result_revision = $query->execute();
+    // -----------------------------------------------------------------------
     }
-
   }
-
 }
 
 /**
