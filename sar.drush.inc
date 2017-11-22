@@ -46,6 +46,7 @@ function sar_drush_command() {
     'description' => dt('Replace strings in link fields in all content.'),
     'options' => array(
       'fields'   => dt('Only perform the search and replace on these named fields.'),
+      'regex'    => dt('Use regular expression when searching for a match'),
     ),
     'arguments' => array(
       'search'  => dt('Existing text.'),
@@ -54,6 +55,7 @@ function sar_drush_command() {
     'examples' => array(
       'simple'    => dt('drush sarl devel.example.com www.example.com'),
       'fields'    => dt('drush sarl --fields=field_name,field_other devel.example.com www.example.com'),
+      'regex'    => dt('drush sarl devel.example.com www.example.com --regex=^https://'),
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
@@ -223,6 +225,9 @@ function drush_sar_parse_options() {
   // Doing a dry run?
   $dryrun = drush_get_option('dry-run', 0);
 
+  // Use regex?
+  $regex = drush_get_option('regex', 0);
+
   // Showing IDs?
   $showid = drush_get_option('show-ids', 0);
   if ($showid) $dryrun = 1;
@@ -258,6 +263,7 @@ function drush_sar_parse_options() {
     'showid'  => $showid,
     'error' => $error,
     'menus' => $menus,
+    'regex' => $regex,
   );
 }
 
@@ -296,13 +302,26 @@ function _drush_sar_replace_links($options) {
       // THE MEAT -
       // -----------------------------------------------------------------------
 
-      $query = db_update($data_table)
-        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-      $result_data = $query->execute();
+      if (!$options['regex']) {
+        $query = db_update($data_table)
+          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+        $result_data = $query->execute();
 
-      $query = db_update($revision_table)
-        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-      $result_revision = $query->execute();
+        $query = db_update($revision_table)
+          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+        $result_revision = $query->execute();
+      }
+      else {
+        $query = db_update($data_table)
+          ->expression($column, "REGEX :regex", array(":regex" => $options['regex']))
+          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+        $result_data = $query->execute();
+
+        $query = db_update($revision_table)
+          ->expression($column, "REGEX :regex", array(":regex" => $options['regex']))
+          ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+        $result_revision = $query->execute();
+      }
 
       // -----------------------------------------------------------------------
 
