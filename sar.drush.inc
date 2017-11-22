@@ -306,14 +306,15 @@ function _drush_sar_replace_links($options) {
       $query = db_update($data_table)
         ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
       if ($options['regex']) {
-        $query->condition($column, $option['regex'], "REGEXP");
+        $query->condition($column, $options['regex'], "REGEXP");
       }
+      print strtr((string) $query, $query->arguments()) . "\n\n";
       $result_data = $query->execute();
 
       $query = db_update($revision_table)
         ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
       if ($options['regex']) {
-        $query->condition($column, $option['regex'], "REGEXP");
+        $query->condition($column, $options['regex'], "REGEXP");
       }
       $result_revision = $query->execute();
     // -----------------------------------------------------------------------
