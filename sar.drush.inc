@@ -308,7 +308,6 @@ function _drush_sar_replace_links($options) {
       if ($options['regex']) {
         $query->condition($column, $options['regex'], "REGEXP");
       }
-      print strtr((string) $query, $query->arguments()) . "\n\n";
       $result_data = $query->execute();
 
       $query = db_update($revision_table)
