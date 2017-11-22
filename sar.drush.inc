@@ -67,6 +67,7 @@ function sar_drush_command() {
     'description' => dt('Replace strings in menu items.'),
     'options' => array(
       'menus'   => dt('Only perform the search and replace on these menus.'),
+      'regex'   => dt('Use regular expression when searching for a match'),
     ),
     'arguments' => array(
       'search'  => dt('Existing text.'),
@@ -75,6 +76,7 @@ function sar_drush_command() {
     'examples' => array(
       'simple'    => dt('drush sarm devel.example.com www.example.com'),
       'menus'    => dt('drush sarm --menus=main_menu,navigation devel.example.com www.example.com'),
+      'regex'    => dt('drush sarm devel.example.com www.example.com --regex=^https://'),
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
@@ -350,31 +352,38 @@ function _drush_sar_replace_menus($options) {
     return;
   }
 
-  foreach ($menus as $menu_name) {
+  foreach ($menu_names as $menu_name) {
     // Link Path.
     $query = db_update("menu_links")
       ->condition("menu_name", $menu_name)
-      ->expression("link_path", "REPLACE(\"link_path\", :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      ->expression("link_path", "REPLACE(link_path, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+    if ($options['regex']) {
+      $query->condition("link_path", $options['regex'], "REGEXP");
+    }
     $result_data = $query->execute();
 
     // Router Path.
     $query = db_update("menu_links")
       ->condition("menu_name", $menu_name)
-      ->expression("router_path", "REPLACE(\"router_path\", :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      ->expression("router_path", "REPLACE(router_path, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+    if ($options['regex']) {
+      $query->condition("router_path", $options['regex'], "REGEXP");
+    }
+
     $result_data = $query->execute();
 
     // Link Title.
     $query = db_update("menu_links")
       ->condition("menu_name", $menu_name)
-      ->expression("link_title", "REPLACE(\"link_title\", :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      ->expression("link_title", "REPLACE(link_title, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+    if ($options['regex']) {
+      $query->condition("link_title", $options['regex'], "REGEXP");
+    }
     $result_data = $query->execute();
   }
 
   echo "Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in: " . implode($menu_names, ", ");
-
 }
-
-
 
 /**
  * [_is_link_field description]
