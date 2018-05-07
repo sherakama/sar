@@ -359,11 +359,11 @@ function _drush_sar_replace_js_injector($options) {
   $query = db_update("js_injector_rule")
     ->expression("js", "REPLACE(js, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
   if ($options['regex']) {
-    $query->condition("link_path", $options['regex'], "REGEXP");
+    $query->condition("js", $options['regex'], "REGEXP");
   }
   $result_data = $query->execute();
 
-  echo "Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in all JS Injector rules.";
+  drush_log("Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in all JS Injector rules.", "ok");
 }
 
 
