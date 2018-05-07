@@ -104,17 +104,17 @@ function sar_drush_command() {
   $items['search-and-replace-views'] = array(
     'aliases' => array('sarv'),
     'callback' => 'drush_sar_replace_views',
-    'description' => dt('Replace strings in all Views.'),
-    'options' => array(
-      'regex' => dt('Use regular expression when searching for a match'),
-    ),
+    'description' => dt('Replace strings in all Views. The search and replace strings support regex as used in preg_replace().'),
     'arguments' => array(
       'search' => dt('Existing text.'),
       'replace' => dt('Replacement text.'),
     ),
+    'options' => array(
+      'regex' => dt('Use regular expression when searching for a match'),
+    ),
     'examples' => array(
       'simple' => dt('drush sarv devel.example.com www.example.com'),
-      'regex' => dt('drush sarv devel.example.com www.example.com --regex=^https://'),
+      'regex' => dt('drush sarv --regex "([a-z0-9]).example.com" "\$1.example.org"'),
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
@@ -477,15 +477,48 @@ function _drush_sar_replace_menus($options) {
  */
 function _drush_sar_replace_views($options) {
 
-  // views_display.
-  $query = db_update("views_display")
-    ->expression("display_options", "REPLACE(display_options, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
-  if ($options['regex']) {
-    $query->condition("link_path", $options['regex'], "REGEXP");
+  $changed = FALSE;
+  // Get our views_display.
+  $result = db_query('SELECT vid,id,display_options FROM {views_display} vd');
+  foreach ($result as $record) {
+    // Unserialize the `display_options` column to get it into an array.
+    $display_options = unserialize(($record->display_options));
+    // Track the original.
+    $display_options_orig = $display_options;
+    // Format our search and replace strings for preg_replace(). Use preg_quote() to escape forward slashes like sites.stanford.edu/foo.
+    $search = preg_quote($options['search'], "/");
+    if ($options['regex']) {
+      $search = $options['search'];
+    }
+    $search = '/' . $search . '/';
+    $replace = $options['replace'];
+    var_dump($search);
+    var_dump($replace);
+    $display_options['footer']['area']['content'] = preg_replace($search, $replace, $display_options['footer']['area']['content']);
+    $display_options['header']['area']['content'] = preg_replace($search, $replace, $display_options['header']['area']['content']);
+    // Only run the DB query if we have changed the options.
+    if ($display_options !== $display_options_orig) {
+      $display_options = serialize($display_options);
+      // The primary keys for the views_display table are vid, id (e.g., 13,default).
+      $vid = $record->vid;
+      $id = $record->id;
+      // "UPDATE views_display SET display_options = $display_options WHERE vid = $vid and id = $id"
+      $num_updated = db_update('views_display')
+        ->fields(array('display_options' => $display_options))
+        ->condition('vid', $vid)
+        ->condition('id', $id)
+        ->execute();
+      $message = t("The display options for vid=@vid and id=@id have been updated.", array('@vid' => $vid, '@id' => $id));
+      drush_log($message, "ok");
+      $changed = TRUE;
+    }
   }
-  $result_data = $query->execute();
-
-  echo "Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in all Views.";
+  if ($changed == TRUE) {
+    drush_log("Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in applicable Views.", "ok");
+  }
+  else {
+    drush_log("sarv could not find the string \"" . $options['search'] . "\" to replace with \"" . $options['replace'] . "\".", "error");
+  }
 }
 
 /**
