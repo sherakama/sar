@@ -482,7 +482,7 @@ function _drush_sar_replace_views($options) {
   $result = db_query('SELECT vid,id,display_options FROM {views_display} vd');
   foreach ($result as $record) {
     // Unserialize the `display_options` column to get it into an array.
-    $display_options = unserialize(($record->display_options));
+    $display_options = unserialize($record->display_options);
     // Track the original.
     $display_options_orig = $display_options;
     // Format our search and replace strings for preg_replace(). Use preg_quote() to escape forward slashes like sites.stanford.edu/foo.
