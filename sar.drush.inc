@@ -492,8 +492,6 @@ function _drush_sar_replace_views($options) {
     }
     $search = '/' . $search . '/';
     $replace = $options['replace'];
-    var_dump($search);
-    var_dump($replace);
     $display_options['footer']['area']['content'] = preg_replace($search, $replace, $display_options['footer']['area']['content']);
     $display_options['header']['area']['content'] = preg_replace($search, $replace, $display_options['header']['area']['content']);
     // Only run the DB query if we have changed the options.
