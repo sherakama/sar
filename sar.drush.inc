@@ -39,7 +39,26 @@ function sar_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
 
-  // For links.
+  // For JS Injector rules.
+  $items['search-and-replace-js-injector'] = array(
+    'aliases' => array('sarjs'),
+    'callback' => 'drush_sar_replace_js_injector',
+    'description' => dt('Replace strings in all JS Injector rules.'),
+    'options' => array(
+      'regex' => dt('Use regular expression when searching for a match'),
+    ),
+    'arguments' => array(
+      'search' => dt('Existing text.'),
+      'replace' => dt('Replacement text.'),
+    ),
+    'examples' => array(
+      'simple' => dt('drush sarjs devel.example.com www.example.com'),
+      'regex' => dt('drush sarjs devel.example.com www.example.com --regex=^https://'),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+  );
+
+    // For links.
   $items['search-and-replace-link'] = array(
     'aliases' => array('sarl'),
     'callback' => 'drush_sar_replace_link',
@@ -81,7 +100,26 @@ function sar_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
 
-  return $items;
+  // For Views.
+  $items['search-and-replace-views'] = array(
+    'aliases' => array('sarv'),
+    'callback' => 'drush_sar_replace_views',
+    'description' => dt('Replace strings in all Views. The search and replace strings support regex as used in preg_replace().'),
+    'arguments' => array(
+      'search' => dt('Existing text.'),
+      'replace' => dt('Replacement text.'),
+    ),
+    'options' => array(
+      'regex' => dt('Use regular expression when searching for a match'),
+    ),
+    'examples' => array(
+      'simple' => dt('drush sarv devel.example.com www.example.com'),
+      'regex' => dt('drush sarv --regex "([a-z0-9]).example.com" "\$1.example.org"'),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+  );
+
+    return $items;
 }
 
 /**
@@ -149,6 +187,27 @@ function drush_sar_replace() {
 }
 
 /**
+ * Command callback function for drush sarj.
+ *
+ * Search and replace all strings in JS Injector rules.
+ */
+function drush_sar_replace_js_injector() {
+  // Parse our command line options.
+  $options = drush_sar_parse_options();
+
+  // If there's a problem yo I'll solve it...
+  if (!empty($options['error'])) {
+    foreach ($options['error'] as $error) {
+      drush_log($error, 'error');
+    }
+    return 0;
+  }
+
+  return _drush_sar_replace_js_injector($options);
+
+}
+
+/**
  * Command callback.
  *
  * This callback checks the version of Drupal it's operating on and runs an
@@ -194,6 +253,27 @@ function drush_sar_replace_menu() {
   }
 
   return _drush_sar_replace_menus($options);
+
+}
+
+/**
+ * Command callback function for drush sarv.
+ *
+ * Search and replace all strings in Views.
+ */
+function drush_sar_replace_views() {
+  // Parse our command line options.
+  $options = drush_sar_parse_options();
+
+  // If there's a problem yo I'll solve it...
+  if (!empty($options['error'])) {
+    foreach ($options['error'] as $error) {
+      drush_log($error, 'error');
+    }
+    return 0;
+  }
+
+  return _drush_sar_replace_views($options);
 
 }
 
@@ -268,6 +348,24 @@ function drush_sar_parse_options() {
     'regex' => $regex,
   );
 }
+
+/**
+ * Private function to do a DB REPLACE query on the `js_injector_rule` table.
+ *
+ */
+function _drush_sar_replace_js_injector($options) {
+
+  // views_display.
+  $query = db_update("js_injector_rule")
+    ->expression("js", "REPLACE(js, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+  if ($options['regex']) {
+    $query->condition("js", $options['regex'], "REGEXP");
+  }
+  $result_data = $query->execute();
+
+  drush_log("Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in all JS Injector rules.", "ok");
+}
+
 
 /**
  * [_drush_sar_replace_links description]
@@ -371,6 +469,54 @@ function _drush_sar_replace_menus($options) {
   }
 
   echo "Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in: " . implode($menu_names, ", ");
+}
+
+/**
+ * Private function to do a DB REPLACE query on the `views_display` table.
+ *
+ */
+function _drush_sar_replace_views($options) {
+
+  $changed = FALSE;
+  // Get our views_display.
+  $result = db_query('SELECT vid,id,display_options FROM {views_display} vd');
+  foreach ($result as $record) {
+    // Unserialize the `display_options` column to get it into an array.
+    $display_options = unserialize($record->display_options);
+    // Track the original.
+    $display_options_orig = $display_options;
+    // Format our search and replace strings for preg_replace(). Use preg_quote() to escape forward slashes like sites.stanford.edu/foo.
+    $search = preg_quote($options['search'], "/");
+    if ($options['regex']) {
+      $search = $options['search'];
+    }
+    $search = '/' . $search . '/';
+    $replace = $options['replace'];
+    $display_options['footer']['area']['content'] = preg_replace($search, $replace, $display_options['footer']['area']['content']);
+    $display_options['header']['area']['content'] = preg_replace($search, $replace, $display_options['header']['area']['content']);
+    // Only run the DB query if we have changed the options.
+    if ($display_options !== $display_options_orig) {
+      $display_options = serialize($display_options);
+      // The primary keys for the views_display table are vid, id (e.g., 13,default).
+      $vid = $record->vid;
+      $id = $record->id;
+      // "UPDATE views_display SET display_options = $display_options WHERE vid = $vid and id = $id"
+      $num_updated = db_update('views_display')
+        ->fields(array('display_options' => $display_options))
+        ->condition('vid', $vid)
+        ->condition('id', $id)
+        ->execute();
+      $message = t("The display options for vid=@vid and id=@id have been updated.", array('@vid' => $vid, '@id' => $id));
+      drush_log($message, "ok");
+      $changed = TRUE;
+    }
+  }
+  if ($changed == TRUE) {
+    drush_log("Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in applicable Views.", "ok");
+  }
+  else {
+    drush_log("sarv could not find the string \"" . $options['search'] . "\" to replace with \"" . $options['replace'] . "\".", "error");
+  }
 }
 
 /**
