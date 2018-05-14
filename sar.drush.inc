@@ -354,7 +354,10 @@ function drush_sar_parse_options() {
  *
  */
 function _drush_sar_replace_js_injector($options) {
-
+  if (!db_table_exists('js_injector_rule')) {
+    drush_log("The 'js_injector_rule' table does not exist. Took no action.", "warning");
+    return;
+  }
   // views_display.
   $query = db_update("js_injector_rule")
     ->expression("js", "REPLACE(js, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
@@ -476,7 +479,10 @@ function _drush_sar_replace_menus($options) {
  *
  */
 function _drush_sar_replace_views($options) {
-
+  if (!db_table_exists('views_display')) {
+    drush_log("The 'views_display' table does not exist. Took no action.", "warning");
+    return;
+  }
   $changed = FALSE;
   // Get our views_display.
   $result = db_query('SELECT vid,id,display_options FROM {views_display} vd');
