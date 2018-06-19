@@ -58,7 +58,7 @@ function sar_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
 
-    // For links.
+  // For links.
   $items['search-and-replace-link'] = array(
     'aliases' => array('sarl'),
     'callback' => 'drush_sar_replace_link',
@@ -119,7 +119,26 @@ function sar_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
   );
 
-    return $items;
+  // For Contexts.
+  $items['search-and-replace-context'] = array(
+    'aliases' => array('sarc'),
+    'callback' => 'drush_sar_replace_context',
+    'description' => dt('Replace strings in all contexts. The search and replace strings support regex as used in preg_replace().'),
+    'arguments' => array(
+      'search' => dt('Existing text.'),
+      'replace' => dt('Replacement text.'),
+    ),
+    'options' => array(
+      'regex' => dt('Use regular expression when searching for a match'),
+    ),
+    'examples' => array(
+      'simple' => dt('drush sarc this-old-path my-new-url'),
+      'regex' => dt('drush sarc --regex "([a-z0-9]).example.com" "\$1.example.org"'),
+    ),
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_FULL,
+  );
+
+  return $items;
 }
 
 /**
@@ -152,7 +171,12 @@ function drush_sar_replace() {
     return 0;
   }
 
-  drush_print(dt('Going to @operate a search & replace on all text fields in all bundles and all custom blocks on @site', array('@site' => variable_get('site_name', 'Drupal'), '@operate' => empty($options['dryrun']) ? 'perform' : 'fake')));
+  drush_print(dt('Going to @operate a search & replace on all text fields in all bundles and all custom blocks on @site',
+    array(
+      '@site' => variable_get('site_name', 'Drupal'),
+      '@operate' => empty($options['dryrun']) ? 'perform' : 'fake'
+    )
+  ));
   drush_print(dt('  !search => !replace', array('!search' => $options['search'], '!replace' => $options['replace'])));
   drush_print(dt(' '));
 
@@ -278,6 +302,27 @@ function drush_sar_replace_views() {
 }
 
 /**
+ * Command callback function for drush sarc.
+ *
+ * Search and replace all strings in Contexts.
+ */
+function drush_sar_replace_context() {
+  // Parse our command line options.
+  $options = drush_sar_parse_options();
+
+  // If there's a problem yo I'll solve it...
+  if (!empty($options['error'])) {
+    foreach ($options['error'] as $error) {
+      drush_log($error, 'error');
+    }
+    return 0;
+  }
+
+  return _drush_sar_replace_context($options);
+
+}
+
+/**
  * Parse CLI args and options and return as an array.
  */
 function drush_sar_parse_options() {
@@ -312,7 +357,9 @@ function drush_sar_parse_options() {
 
   // Showing IDs?
   $showid = drush_get_option('show-ids', 0);
-  if ($showid) $dryrun = 1;
+  if ($showid) {
+    $dryrun = 1;
+  }
 
   // The other CLI args.
   $args = drush_get_arguments();
@@ -360,7 +407,7 @@ function _drush_sar_replace_js_injector($options) {
   }
   // views_display.
   $query = db_update("js_injector_rule")
-    ->expression("js", "REPLACE(js, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+  ->expression("js", "REPLACE(js, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
   if ($options['regex']) {
     $query->condition("js", $options['regex'], "REGEXP");
   }
@@ -369,11 +416,14 @@ function _drush_sar_replace_js_injector($options) {
   drush_log("Replaced \"" . $options['search'] . "\"  with \"" . $options['replace'] . "\" in all JS Injector rules.", "ok");
 }
 
-
 /**
  * [_drush_sar_replace_links description]
- * @param  [type] $options [description]
- * @return [type]          [description]
+ *
+ * @param  [type] $options
+ * [description]
+ *
+ * @return mixed
+ * [description]
  */
 function _drush_sar_replace_links($options) {
 
@@ -405,26 +455,26 @@ function _drush_sar_replace_links($options) {
       // THE MEAT -
       // -----------------------------------------------------------------------
       $query = db_update($data_table)
-        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
       if ($options['regex']) {
         $query->condition($column, $options['regex'], "REGEXP");
       }
       $result_data = $query->execute();
 
       $query = db_update($revision_table)
-        ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
+      ->expression($column, "REPLACE(${column}, :search, :replace)", array(':search' => $options['search'], ':replace' => $options['replace']));
       if ($options['regex']) {
         $query->condition($column, $options['regex'], "REGEXP");
       }
       $result_revision = $query->execute();
-    // -----------------------------------------------------------------------
+      // -----------------------------------------------------------------------
     }
   }
 }
 
 /**
  * [_drush_sar_replace_menu description]
- * @param  [type] $options [description]
+ * @param  array $options [description]
  * @return [type]          [description]
  */
 function _drush_sar_replace_menus($options) {
@@ -526,6 +576,116 @@ function _drush_sar_replace_views($options) {
 }
 
 /**
+ * Private function to do a DB REPLACE query on the `context` table.
+ */
+function _drush_sar_replace_context($options) {
+
+  if (!db_table_exists('context')) {
+    drush_log("The 'context' table does not exist. Took no action.", "warning");
+    return;
+  }
+
+  $contexts = context_load();
+  foreach ($contexts as $context) {
+
+    if ($options['regex']) {
+      _drush_sar_replace_context_regex($options, $context);
+    }
+    else {
+      _drush_sar_replace_context_string($options, $context);
+    }
+  }
+
+}
+
+/**
+ * [_drush_sar_replace_context_regex description]
+ * @param  [type] $options [description]
+ * @param  [type] $context [description]
+ * @return [type]          [description]
+ */
+function _drush_sar_replace_context_regex($options, $context) {
+  $search = '/' . $options['search'] . '/';
+  $replace = $options['replace'];
+
+  $context->name = preg_replace($search, $replace, $context->name);
+  $context->description = preg_replace($search, $replace, $context->description);
+  $context->tag = preg_replace($search, $replace, $context->tag);
+  $conditions = array();
+  foreach ($context->conditions as $k => $condition) {
+    if (isset($condition['values'])) {
+      foreach ($condition['values'] as $con_k => $con_v) {
+        unset($context->conditions[$k][$con_k]);
+        $new_k = preg_replace($search, $replace, $con_k);
+        $new_v = preg_replace($search, $replace, $con_v);
+        $conditions[$k]['values'][$new_k] = $new_v;
+      }
+    }
+    else {
+      $conditions[$k] = $condition;
+    }
+  }
+
+  // Re set the conditions back.
+  $context->conditions = $conditions;
+
+  // Save the changes.
+  $is_good = context_save($context);
+
+  // If the machine name changed delete old one.
+  if ($original_name !== $context->name && $is_good) {
+    $context = context_load($original_name);
+    context_delete($context);
+  }
+
+}
+
+/**
+ * [_drush_sar_replace_context_string description]
+ * @param  [type] $options [description]
+ * @param  [type] $context [description]
+ * @return [type]          [description]
+ */
+function _drush_sar_replace_context_string($options, $context) {
+  $search = $options['search'];
+  $replace = $options['replace'];
+  $original_name = $context->name;
+
+  $context->name = str_replace($search, $replace, $context->name);
+  $context->description = str_replace($search, $replace, $context->description);
+  $context->tag = str_replace($search, $replace, $context->tag);
+  $conditions = array();
+  foreach ($context->conditions as $k => $condition) {
+    if (isset($condition['values'])) {
+      foreach ($condition['values'] as $con_k => $con_v) {
+        unset($context->conditions[$k][$con_k]);
+        $new_k = str_replace($search, $replace, $con_k);
+        $new_v = str_replace($search, $replace, $con_v);
+        $conditions[$k]['values'][$new_k] = $new_v;
+      }
+    }
+    else {
+      $conditions[$k] = $condition;
+    }
+  }
+
+  // Re set the conditions back.
+  $context->conditions = $conditions;
+
+  // Save the changes.
+  $is_good = context_save($context);
+
+  // If the machine name changed delete old one.
+  if ($original_name !== $context->name && $is_good) {
+    $context = context_load($original_name);
+    context_delete($context);
+  }
+
+}
+
+
+
+/**
  * [_is_link_field description]
  * @param  [type]  $var [description]
  * @return boolean      [description]
@@ -547,7 +707,6 @@ function is_field_option($var) {
 
   return in_array($var['field_name'], $fields);
 }
-
 
 /**
  * Does the search and replace for Drupal 7 sites.
