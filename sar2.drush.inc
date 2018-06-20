@@ -431,11 +431,11 @@ function _drush_sar2_replace_links($options) {
   $fields = field_info_fields();
 
   // Only linkn fields.
-  $link_fields = array_filter($fields, "is_link_field");
+  $link_fields = array_filter($fields, "is_link_field2");
 
   // If fields are explicit then filter out to just those.
   if (!empty($options['fields'])) {
-    $link_fields = array_filter($link_fields, "is_field_option");
+    $link_fields = array_filter($link_fields, "is_field_option2");
   }
 
   if (empty($link_fields)) {
@@ -686,20 +686,20 @@ function _drush_sar2_replace_context_string($options, $context) {
 
 
 /**
- * [_is_link_field description]
+ * [_is_link_field2 description]
  * @param  [type]  $var [description]
  * @return boolean      [description]
  */
-function is_link_field($var) {
+function is_link_field2($var) {
   return ($var['module'] === "link");
 }
 
 /**
- * [is_field_option description]
+ * [is_field_option2 description]
  * @param  [type]  $var [description]
  * @return boolean      [description]
  */
-function is_field_option($var) {
+function is_field_option2($var) {
   $fields = drush_get_option('fields');
   if (!empty($fields)) {
     $fields = array_filter(explode(',', $fields));
