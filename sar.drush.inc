@@ -9,12 +9,12 @@
 /**
  * Implements hook_drush_command().
  */
-function sar_drush_command() {
+function sar2_drush_command() {
 
   // Just for text fields.
   $items['search-and-replace'] = array(
     'aliases' => array('sar'),
-    'callback' => 'drush_sar_replace',
+    'callback' => 'drush_sar2_replace',
     'description' => dt('Replace strings in text fields in all content.'),
     'options' => array(
       'blocks'   => dt('Only perform the search and replace on blocks.'),
@@ -42,7 +42,7 @@ function sar_drush_command() {
   // For JS Injector rules.
   $items['search-and-replace-js-injector'] = array(
     'aliases' => array('sarjs'),
-    'callback' => 'drush_sar_replace_js_injector',
+    'callback' => 'drush_sar2_replace_js_injector',
     'description' => dt('Replace strings in all JS Injector rules.'),
     'options' => array(
       'regex' => dt('Use regular expression when searching for a match'),
@@ -61,7 +61,7 @@ function sar_drush_command() {
   // For links.
   $items['search-and-replace-link'] = array(
     'aliases' => array('sarl'),
-    'callback' => 'drush_sar_replace_link',
+    'callback' => 'drush_sar2_replace_link',
     'description' => dt('Replace strings in link fields in all content.'),
     'options' => array(
       'fields'   => dt('Only perform the search and replace on these named fields.'),
@@ -82,7 +82,7 @@ function sar_drush_command() {
   // For menu items.
   $items['search-and-replace-menu'] = array(
     'aliases' => array('sarm'),
-    'callback' => 'drush_sar_replace_menu',
+    'callback' => 'drush_sar2_replace_menu',
     'description' => dt('Replace strings in menu items.'),
     'options' => array(
       'menus'   => dt('Only perform the search and replace on these menus.'),
@@ -103,7 +103,7 @@ function sar_drush_command() {
   // For Views.
   $items['search-and-replace-views'] = array(
     'aliases' => array('sarv'),
-    'callback' => 'drush_sar_replace_views',
+    'callback' => 'drush_sar2_replace_views',
     'description' => dt('Replace strings in all Views. The search and replace strings support regex as used in preg_replace().'),
     'arguments' => array(
       'search' => dt('Existing text.'),
@@ -122,7 +122,7 @@ function sar_drush_command() {
   // For Contexts.
   $items['search-and-replace-context'] = array(
     'aliases' => array('sarc'),
-    'callback' => 'drush_sar_replace_context',
+    'callback' => 'drush_sar2_replace_context',
     'description' => dt('Replace strings in all contexts. The search and replace strings support regex as used in preg_replace().'),
     'arguments' => array(
       'search' => dt('Existing text.'),
@@ -144,7 +144,7 @@ function sar_drush_command() {
 /**
  * Implements hook_hook_drush_command_validate().
  */
-function drush_sar_replace_validate() {
+function drush_sar2_replace_validate() {
   $args = drush_get_arguments();
   if (count($args) < 3) {
     drush_set_error('NO_TEXT', dt('You must specify text to search & replace.'));
@@ -158,10 +158,10 @@ function drush_sar_replace_validate() {
  * appropriate function to do the actual work. If an unsupported version is
  * detected, it will exit.
  */
-function drush_sar_replace() {
+function drush_sar2_replace() {
 
   // Parse our command line options.
-  $options = drush_sar_parse_options();
+  $options = drush_sar2_parse_options();
 
   // If there's a problem yo I'll solve it...
   if (!empty($options['error'])) {
@@ -199,10 +199,10 @@ function drush_sar_replace() {
 
   switch (drush_drupal_major_version()) {
     case 7:
-      return _drush_sar_replace_d7($options);
+      return _drush_sar2_replace_d7($options);
 
     case 6:
-      return _drush_sar_replace_d6($options);
+      return _drush_sar2_replace_d6($options);
 
     default:
       drush_log(dt('This version of Drupal is not supported.'), 'error');
@@ -215,9 +215,9 @@ function drush_sar_replace() {
  *
  * Search and replace all strings in JS Injector rules.
  */
-function drush_sar_replace_js_injector() {
+function drush_sar2_replace_js_injector() {
   // Parse our command line options.
-  $options = drush_sar_parse_options();
+  $options = drush_sar2_parse_options();
 
   // If there's a problem yo I'll solve it...
   if (!empty($options['error'])) {
@@ -227,7 +227,7 @@ function drush_sar_replace_js_injector() {
     return 0;
   }
 
-  return _drush_sar_replace_js_injector($options);
+  return _drush_sar2_replace_js_injector($options);
 
 }
 
@@ -238,10 +238,10 @@ function drush_sar_replace_js_injector() {
  * appropriate function to do the actual work. If an unsupported version is
  * detected, it will exit.
  */
-function drush_sar_replace_link() {
+function drush_sar2_replace_link() {
 
   // Parse our command line options.
-  $options = drush_sar_parse_options();
+  $options = drush_sar2_parse_options();
 
   // If there's a problem yo I'll solve it...
   if (!empty($options['error'])) {
@@ -255,7 +255,7 @@ function drush_sar_replace_link() {
   drush_print(dt('  !search => !replace', array('!search' => $options['search'], '!replace' => $options['replace'])));
   drush_print(dt(' '));
 
-  return _drush_sar_replace_links($options);
+  return _drush_sar2_replace_links($options);
 
 }
 
@@ -264,9 +264,9 @@ function drush_sar_replace_link() {
  *
  * Search and replace all strings in menu items (title & link)
  */
-function drush_sar_replace_menu() {
+function drush_sar2_replace_menu() {
   // Parse our command line options.
-  $options = drush_sar_parse_options();
+  $options = drush_sar2_parse_options();
 
   // If there's a problem yo I'll solve it...
   if (!empty($options['error'])) {
@@ -276,7 +276,7 @@ function drush_sar_replace_menu() {
     return 0;
   }
 
-  return _drush_sar_replace_menus($options);
+  return _drush_sar2_replace_menus($options);
 
 }
 
@@ -285,9 +285,9 @@ function drush_sar_replace_menu() {
  *
  * Search and replace all strings in Views.
  */
-function drush_sar_replace_views() {
+function drush_sar2_replace_views() {
   // Parse our command line options.
-  $options = drush_sar_parse_options();
+  $options = drush_sar2_parse_options();
 
   // If there's a problem yo I'll solve it...
   if (!empty($options['error'])) {
@@ -297,7 +297,7 @@ function drush_sar_replace_views() {
     return 0;
   }
 
-  return _drush_sar_replace_views($options);
+  return _drush_sar2_replace_views($options);
 
 }
 
@@ -306,9 +306,9 @@ function drush_sar_replace_views() {
  *
  * Search and replace all strings in Contexts.
  */
-function drush_sar_replace_context() {
+function drush_sar2_replace_context() {
   // Parse our command line options.
-  $options = drush_sar_parse_options();
+  $options = drush_sar2_parse_options();
 
   // If there's a problem yo I'll solve it...
   if (!empty($options['error'])) {
@@ -318,14 +318,14 @@ function drush_sar_replace_context() {
     return 0;
   }
 
-  return _drush_sar_replace_context($options);
+  return _drush_sar2_replace_context($options);
 
 }
 
 /**
  * Parse CLI args and options and return as an array.
  */
-function drush_sar_parse_options() {
+function drush_sar2_parse_options() {
   $error = array();
 
   // Check if there are specific bundles (or node types in D6) to process.
@@ -400,7 +400,7 @@ function drush_sar_parse_options() {
  * Private function to do a DB REPLACE query on the `js_injector_rule` table.
  *
  */
-function _drush_sar_replace_js_injector($options) {
+function _drush_sar2_replace_js_injector($options) {
   if (!db_table_exists('js_injector_rule')) {
     drush_log("The 'js_injector_rule' table does not exist. Took no action.", "warning");
     return;
@@ -417,7 +417,7 @@ function _drush_sar_replace_js_injector($options) {
 }
 
 /**
- * [_drush_sar_replace_links description]
+ * [_drush_sar2_replace_links description]
  *
  * @param  [type] $options
  * [description]
@@ -425,7 +425,7 @@ function _drush_sar_replace_js_injector($options) {
  * @return mixed
  * [description]
  */
-function _drush_sar_replace_links($options) {
+function _drush_sar2_replace_links($options) {
 
   // Grab all defined fields, then cycle through them and run update queries.
   $fields = field_info_fields();
@@ -473,11 +473,11 @@ function _drush_sar_replace_links($options) {
 }
 
 /**
- * [_drush_sar_replace_menu description]
+ * [_drush_sar2_replace_menu description]
  * @param  array $options [description]
  * @return [type]          [description]
  */
-function _drush_sar_replace_menus($options) {
+function _drush_sar2_replace_menus($options) {
 
   $menus = menu_load_all();
   $menu_names = array_keys($menus);
@@ -528,7 +528,7 @@ function _drush_sar_replace_menus($options) {
  * Private function to do a DB REPLACE query on the `views_display` table.
  *
  */
-function _drush_sar_replace_views($options) {
+function _drush_sar2_replace_views($options) {
   if (!db_table_exists('views_display')) {
     drush_log("The 'views_display' table does not exist. Took no action.", "warning");
     return;
@@ -578,7 +578,7 @@ function _drush_sar_replace_views($options) {
 /**
  * Private function to do a DB REPLACE query on the `context` table.
  */
-function _drush_sar_replace_context($options) {
+function _drush_sar2_replace_context($options) {
 
   if (!db_table_exists('context')) {
     drush_log("The 'context' table does not exist. Took no action.", "warning");
@@ -589,22 +589,22 @@ function _drush_sar_replace_context($options) {
   foreach ($contexts as $context) {
 
     if ($options['regex']) {
-      _drush_sar_replace_context_regex($options, $context);
+      _drush_sar2_replace_context_regex($options, $context);
     }
     else {
-      _drush_sar_replace_context_string($options, $context);
+      _drush_sar2_replace_context_string($options, $context);
     }
   }
 
 }
 
 /**
- * [_drush_sar_replace_context_regex description]
+ * [_drush_sar2_replace_context_regex description]
  * @param  [type] $options [description]
  * @param  [type] $context [description]
  * @return [type]          [description]
  */
-function _drush_sar_replace_context_regex($options, $context) {
+function _drush_sar2_replace_context_regex($options, $context) {
   $search = '/' . $options['search'] . '/';
   $replace = $options['replace'];
 
@@ -641,12 +641,12 @@ function _drush_sar_replace_context_regex($options, $context) {
 }
 
 /**
- * [_drush_sar_replace_context_string description]
+ * [_drush_sar2_replace_context_string description]
  * @param  [type] $options [description]
  * @param  [type] $context [description]
  * @return [type]          [description]
  */
-function _drush_sar_replace_context_string($options, $context) {
+function _drush_sar2_replace_context_string($options, $context) {
   $search = $options['search'];
   $replace = $options['replace'];
   $original_name = $context->name;
@@ -711,7 +711,7 @@ function is_field_option($var) {
 /**
  * Does the search and replace for Drupal 7 sites.
  */
-function _drush_sar_replace_d7($options) {
+function _drush_sar2_replace_d7($options) {
   if (empty($options['blocks'])) {
 
     // Grab all defined fields, then cycle through them and run update queries.
@@ -848,7 +848,7 @@ function _drush_sar_replace_d7($options) {
 /**
  * Does the search and replace for Drupal 6 sites.
  */
-function _drush_sar_replace_d6($options) {
+function _drush_sar2_replace_d6($options) {
   // Update all node revisions
   drush_log(dt('Processing node revisions'), 'ok');
   if (empty($options['dryrun'])) {
