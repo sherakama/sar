@@ -542,21 +542,33 @@ function _drush_sar_replace_views($options) {
     // Track the original.
     $display_options_orig = $display_options;
     // Format our search and replace strings for preg_replace(). Use preg_quote() to escape forward slashes like sites.stanford.edu/foo.
-    $search = preg_quote($options['search'], "/");
-    if ($options['regex']) {
-      $search = $options['search'];
-    }
-    $search = '/' . $search . '/';
+    $search = $options['search'];
     $replace = $options['replace'];
-    $display_options['footer']['area']['content'] = preg_replace($search, $replace, $display_options['footer']['area']['content']);
-    $display_options['header']['area']['content'] = preg_replace($search, $replace, $display_options['header']['area']['content']);
+
+    if ($options['regex']) {
+      $search = preg_quote($options['search'], "/");
+      $search = '/' . $search . '/';
+      $display_options['footer']['area']['content'] = preg_replace($search, $replace, $display_options['footer']['area']['content']);
+      $display_options['header']['area']['content'] = preg_replace($search, $replace, $display_options['header']['area']['content']);
+      if (isset($display_options['path'])) {
+        $display_options['path'] = preg_replace($search, $replace, $display_options['path']);
+      }
+    }
+    else {
+      $display_options['footer']['area']['content'] = str_replace($search, $replace, $display_options['footer']['area']['content']);
+      $display_options['header']['area']['content'] = str_replace($search, $replace, $display_options['header']['area']['content']);
+      if (isset($display_options['path'])) {
+        $display_options['path'] = str_replace($search, $replace, $display_options['path']);
+      }
+    }
+
     // Only run the DB query if we have changed the options.
     if ($display_options !== $display_options_orig) {
       $display_options = serialize($display_options);
       // The primary keys for the views_display table are vid, id (e.g., 13,default).
       $vid = $record->vid;
       $id = $record->id;
-      // "UPDATE views_display SET display_options = $display_options WHERE vid = $vid and id = $id"
+      // "UPDATE views_display SET display_options = $display_options WHERE vid = $vid and id = $id".
       $num_updated = db_update('views_display')
         ->fields(array('display_options' => $display_options))
         ->condition('vid', $vid)
