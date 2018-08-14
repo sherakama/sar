@@ -550,6 +550,14 @@ function _drush_sar_replace_views($options) {
       $search = '/' . $search . '/';
       $display_options['footer']['area']['content'] = preg_replace($search, $replace, $display_options['footer']['area']['content']);
       $display_options['header']['area']['content'] = preg_replace($search, $replace, $display_options['header']['area']['content']);
+
+      if (isset($display_options['footer']['area_text_custom'])) {
+        $display_options['footer']['area_text_custom']['content'] = preg_replace($search, $replace, $display_options['footer']['area_text_custom']['content']);
+      }
+      if (isset($display_options['header']['area_text_custom']['content'])) {
+        $display_options['header']['area_text_custom']['content'] = preg_replace($search, $replace, $display_options['header']['area_text_custom']['content']);
+      }
+
       if (isset($display_options['path'])) {
         $display_options['path'] = preg_replace($search, $replace, $display_options['path']);
       }
@@ -557,6 +565,14 @@ function _drush_sar_replace_views($options) {
     else {
       $display_options['footer']['area']['content'] = str_replace($search, $replace, $display_options['footer']['area']['content']);
       $display_options['header']['area']['content'] = str_replace($search, $replace, $display_options['header']['area']['content']);
+
+      if (isset($display_options['footer']['area_text_custom']['content'])) {
+        $display_options['footer']['area_text_custom']['content'] = str_replace($search, $replace, $display_options['footer']['area_text_custom']['content']);
+      }
+      if (isset($display_options['header']['area_text_custom']['content'])) {
+        $display_options['header']['area_text_custom']['content'] = str_replace($search, $replace, $display_options['header']['area_text_custom']['content']);
+      }
+
       if (isset($display_options['path'])) {
         $display_options['path'] = str_replace($search, $replace, $display_options['path']);
       }
